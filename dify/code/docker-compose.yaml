@@ -579,7 +579,7 @@ services:
   # The postgres database.
   db:
     image: postgres:17
-    ports: "5432:5432"
+    ports: 5432:5432
     restart: always
     environment:
       PGUSER: ${PGUSER:-postgres}
