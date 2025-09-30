@@ -578,9 +578,9 @@ services:
       ENABLE_WEBSITE_WATERCRAWL: ${ENABLE_WEBSITE_WATERCRAWL:-true}
   # The postgres database.
   db:
-    image: postgres:17
+    image: postgres:17.6
     ports:
-      - "5433:5432"
+      - "5432:5432"
     restart: always
     environment:
       PGUSER: ${PGUSER:-postgres}
@@ -613,7 +613,7 @@ services:
 
   # The redis cache.
   redis:
-    image: redis:7
+    image: redis:latest
     restart: always
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:-difyai123456}
