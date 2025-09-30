@@ -50,7 +50,7 @@ x-shared-env: &shared-api-worker-env
   DB_USERNAME: ${DB_USERNAME:-postgres}
   DB_PASSWORD: ${DB_PASSWORD:-difyai123456}
   DB_HOST: ${DB_HOST:-db}
-  DB_PORT: ${DB_PORT:-5432}
+  DB_PORT: ${DB_PORT:-5433}
   DB_DATABASE: ${DB_DATABASE:-dify}
   SQLALCHEMY_POOL_SIZE: ${SQLALCHEMY_POOL_SIZE:-30}
   SQLALCHEMY_POOL_RECYCLE: ${SQLALCHEMY_POOL_RECYCLE:-3600}
@@ -157,7 +157,7 @@ x-shared-env: &shared-api-worker-env
   COUCHBASE_BUCKET_NAME: ${COUCHBASE_BUCKET_NAME:-Embeddings}
   COUCHBASE_SCOPE_NAME: ${COUCHBASE_SCOPE_NAME:-_default}
   PGVECTOR_HOST: ${PGVECTOR_HOST:-pgvector}
-  PGVECTOR_PORT: ${PGVECTOR_PORT:-5432}
+  PGVECTOR_PORT: ${PGVECTOR_PORT:-5433}
   PGVECTOR_USER: ${PGVECTOR_USER:-postgres}
   PGVECTOR_PASSWORD: ${PGVECTOR_PASSWORD:-difyai123456}
   PGVECTOR_DATABASE: ${PGVECTOR_DATABASE:-dify}
@@ -166,14 +166,14 @@ x-shared-env: &shared-api-worker-env
   PGVECTOR_PG_BIGM: ${PGVECTOR_PG_BIGM:-false}
   PGVECTOR_PG_BIGM_VERSION: ${PGVECTOR_PG_BIGM_VERSION:-1.2-20240606}
   VASTBASE_HOST: ${VASTBASE_HOST:-vastbase}
-  VASTBASE_PORT: ${VASTBASE_PORT:-5432}
+  VASTBASE_PORT: ${VASTBASE_PORT:-5433}
   VASTBASE_USER: ${VASTBASE_USER:-dify}
   VASTBASE_PASSWORD: ${VASTBASE_PASSWORD:-Difyai123456}
   VASTBASE_DATABASE: ${VASTBASE_DATABASE:-dify}
   VASTBASE_MIN_CONNECTION: ${VASTBASE_MIN_CONNECTION:-1}
   VASTBASE_MAX_CONNECTION: ${VASTBASE_MAX_CONNECTION:-5}
   PGVECTO_RS_HOST: ${PGVECTO_RS_HOST:-pgvecto-rs}
-  PGVECTO_RS_PORT: ${PGVECTO_RS_PORT:-5432}
+  PGVECTO_RS_PORT: ${PGVECTO_RS_PORT:-5433}
   PGVECTO_RS_USER: ${PGVECTO_RS_USER:-postgres}
   PGVECTO_RS_PASSWORD: ${PGVECTO_RS_PASSWORD:-difyai123456}
   PGVECTO_RS_DATABASE: ${PGVECTO_RS_DATABASE:-dify}
@@ -186,7 +186,7 @@ x-shared-env: &shared-api-worker-env
   ANALYTICDB_NAMESPACE: ${ANALYTICDB_NAMESPACE:-dify}
   ANALYTICDB_NAMESPACE_PASSWORD: ${ANALYTICDB_NAMESPACE_PASSWORD:-difypassword}
   ANALYTICDB_HOST: ${ANALYTICDB_HOST:-gp-test.aliyuncs.com}
-  ANALYTICDB_PORT: ${ANALYTICDB_PORT:-5432}
+  ANALYTICDB_PORT: ${ANALYTICDB_PORT:-5433}
   ANALYTICDB_MIN_CONNECTION: ${ANALYTICDB_MIN_CONNECTION:-1}
   ANALYTICDB_MAX_CONNECTION: ${ANALYTICDB_MAX_CONNECTION:-5}
   TIDB_VECTOR_HOST: ${TIDB_VECTOR_HOST:-tidb}
@@ -220,7 +220,7 @@ x-shared-env: &shared-api-worker-env
   ORACLE_WALLET_PASSWORD: ${ORACLE_WALLET_PASSWORD:-dify}
   ORACLE_IS_AUTONOMOUS: ${ORACLE_IS_AUTONOMOUS:-false}
   RELYT_HOST: ${RELYT_HOST:-db}
-  RELYT_PORT: ${RELYT_PORT:-5432}
+  RELYT_PORT: ${RELYT_PORT:-5433}
   RELYT_USER: ${RELYT_USER:-postgres}
   RELYT_PASSWORD: ${RELYT_PASSWORD:-difyai123456}
   RELYT_DATABASE: ${RELYT_DATABASE:-postgres}
@@ -815,58 +815,70 @@ services:
       AUTHORIZATION_ADMINLIST_ENABLED: ${WEAVIATE_AUTHORIZATION_ADMINLIST_ENABLED:-true}
       AUTHORIZATION_ADMINLIST_USERS: ${WEAVIATE_AUTHORIZATION_ADMINLIST_USERS:-hello@dify.ai}
 
-  # Qdrant vector store.
-  # (if used, you need to set VECTOR_STORE to qdrant in the api & worker service.)
-  qdrant:
-    image: langgenius/qdrant:v1.7.3
     profiles:
-      - qdrant
-    restart: always
-    volumes:
-      - ./volumes/qdrant:/qdrant/storage
+      - opensearch
     environment:
-      QDRANT_API_KEY: ${QDRANT_API_KEY:-difyai123456}
-
-  minio:
-    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
-    profiles:
-      - milvus
-    environment:
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      discovery.type: ${OPENSEARCH_DISCOVERY_TYPE:-single-node}
+      bootstrap.memory_lock: ${OPENSEARCH_BOOTSTRAP_MEMORY_LOCK:-true}
+      OPENSEARCH_JAVA_OPTS: -Xms${OPENSEARCH_JAVA_OPTS_MIN:-512m}
+        -Xmx${OPENSEARCH_JAVA_OPTS_MAX:-1024m}
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-Qazwsxedc!@#123}
+    ulimits:
+      memlock:
+        soft: ${OPENSEARCH_MEMLOCK_SOFT:--1}
+        hard: ${OPENSEARCH_MEMLOCK_HARD:--1}
+      nofile:
+        soft: ${OPENSEARCH_NOFILE_SOFT:-65536}
+        hard: ${OPENSEARCH_NOFILE_HARD:-65536}
     volumes:
-      - ./volumes/milvus/minio:/minio_data
-    command: minio server /minio_data --console-address ":9001"
-    healthcheck:
-      test: [ 'CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live' ]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      - ./volumes/opensearch/data:/usr/share/opensearch/data
     networks:
-      - milvus
+      - opensearch-net
 
-  milvus-standalone:
-    image: milvusdb/milvus:v2.5.0-beta
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
     profiles:
-      - milvus
-    command: [ 'milvus', 'run', 'standalone' ]
+      - opensearch
     environment:
-      ETCD_ENDPOINTS: ${ETCD_ENDPOINTS:-etcd:2379}
-      MINIO_ADDRESS: ${MINIO_ADDRESS:-minio:9000}
-      common.security.authorizationEnabled: ${MILVUS_AUTHORIZATION_ENABLED:-true}
+      OPENSEARCH_HOSTS: '["https://opensearch:9200"]'
     volumes:
-      - ./volumes/milvus/milvus:/var/lib/milvus
-    healthcheck:
-      test: [ 'CMD', 'curl', '-f', 'http://localhost:9091/healthz' ]
-      interval: 30s
-      start_period: 90s
-      timeout: 20s
-      retries: 3
+      - ./volumes/opensearch/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+    networks:
+      - opensearch-net
     depends_on:
-      - etcd
-      - minio
-    networks:
-      - milvus
+      - opensearch
+
+  # opengauss vector database.
+  opengauss:
+    image: opengauss/opengauss:7.0.0-RC1
+    profiles:
+      - opengauss
+    privileged: true
+    restart: always
+    environment:
+      GS_USERNAME: ${OPENGAUSS_USER:-postgres}
+      GS_PASSWORD: ${OPENGAUSS_PASSWORD:-Dify@123}
+      GS_PORT: ${OPENGAUSS_PORT:-6600}
+      GS_DB: ${OPENGAUSS_DATABASE:-dify}
+    volumes:
+      - ./volumes/opengauss/data:/var/lib/opengauss/data
+    healthcheck:
+      test: [ "CMD-SHELL", "netstat -lntp | grep tcp6 > /dev/null 2>&1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # MyScale vector database
+  myscale:
+    image: myscale/myscaledb:1.6.4
+    profiles:
+      - myscale
+    restart: always
+    tty: true
+    volumes:
+      - ./volumes/myscale/data:/var/lib/clickhouse
+      - ./volumes/myscale/log:/var/log/clickhouse-server
+      - ./volumes/myscale/config/users.d/custom_users_config.xml:/etc/clickhouse-server/users.d/custom_users_config.xml
 
   # https://www.elastic.co/guide/en/elasticsearch/reference/current/settings.html
   # https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites
@@ -949,3 +961,4 @@ networks:
 volumes:
   oradata:
   dify_es01_data:
+
