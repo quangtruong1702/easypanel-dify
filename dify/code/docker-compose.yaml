@@ -528,7 +528,7 @@ services:
   # worker service
   # The Celery worker for processing the queue.
   worker:
-    image: langgenius/dify-api:1.4.0
+    image: langgenius/dify-api:main
     restart: always
     environment:
       # Use the shared environment variables.
@@ -554,7 +554,7 @@ services:
 
   # Frontend web application.
   web:
-    image: langgenius/dify-web:1.4.0
+    image: langgenius/dify-web:main
     restart: always
     environment:
       CONSOLE_API_URL: ${CONSOLE_API_URL:-}
@@ -578,7 +578,8 @@ services:
       ENABLE_WEBSITE_WATERCRAWL: ${ENABLE_WEBSITE_WATERCRAWL:-true}
   # The postgres database.
   db:
-    image: postgres:15-alpine
+    image: postgres:17
+    ports: "5432:5432"
     restart: always
     environment:
       PGUSER: ${PGUSER:-postgres}
@@ -611,7 +612,7 @@ services:
 
   # The redis cache.
   redis:
-    image: redis:6-alpine
+    image: redis:7
     restart: always
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:-difyai123456}
@@ -625,7 +626,7 @@ services:
 
   # The DifySandbox
   sandbox:
-    image: langgenius/dify-sandbox:0.2.12
+    image: langgenius/dify-sandbox:main
     restart: always
     environment:
       # The DifySandbox configurations
@@ -649,7 +650,7 @@ services:
 
   # plugin daemon
   plugin_daemon:
-    image: langgenius/dify-plugin-daemon:0.0.10-local
+    image: langgenius/dify-plugin-daemon:main-local
     restart: always
     environment:
       # Use the shared environment variables.
@@ -791,7 +792,7 @@ services:
 
   # The Weaviate vector store.
   weaviate:
-    image: semitechnologies/weaviate:1.19.0
+    image: semitechnologies/weaviate:1.33.0
     profiles:
       - ''
       - weaviate
@@ -824,182 +825,6 @@ services:
       - ./volumes/qdrant:/qdrant/storage
     environment:
       QDRANT_API_KEY: ${QDRANT_API_KEY:-difyai123456}
-
-  # The Couchbase vector store.
-  couchbase-server:
-    build: ./couchbase-server
-    profiles:
-      - couchbase
-    restart: always
-    environment:
-      - CLUSTER_NAME=dify_search
-      - COUCHBASE_ADMINISTRATOR_USERNAME=${COUCHBASE_USER:-Administrator}
-      - COUCHBASE_ADMINISTRATOR_PASSWORD=${COUCHBASE_PASSWORD:-password}
-      - COUCHBASE_BUCKET=${COUCHBASE_BUCKET_NAME:-Embeddings}
-      - COUCHBASE_BUCKET_RAMSIZE=512
-      - COUCHBASE_RAM_SIZE=2048
-      - COUCHBASE_EVENTING_RAM_SIZE=512
-      - COUCHBASE_INDEX_RAM_SIZE=512
-      - COUCHBASE_FTS_RAM_SIZE=1024
-    hostname: couchbase-server
-    working_dir: /opt/couchbase
-    stdin_open: true
-    tty: true
-    entrypoint: [ "" ]
-    command: sh -c "/opt/couchbase/init/init-cbserver.sh"
-    volumes:
-      - ./volumes/couchbase/data:/opt/couchbase/var/lib/couchbase/data
-    healthcheck:
-      # ensure bucket was created before proceeding
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s -f -u Administrator:password
-            http://localhost:8091/pools/default/buckets | grep -q '\\[{' || exit
-            1"
-        ]
-      interval: 10s
-      retries: 10
-      start_period: 30s
-      timeout: 10s
-
-  # The pgvector vector database.
-  pgvector:
-    image: pgvector/pgvector:pg16
-    profiles:
-      - pgvector
-    restart: always
-    environment:
-      PGUSER: ${PGVECTOR_PGUSER:-postgres}
-      # The password for the default postgres user.
-      POSTGRES_PASSWORD: ${PGVECTOR_POSTGRES_PASSWORD:-difyai123456}
-      # The name of the default postgres database.
-      POSTGRES_DB: ${PGVECTOR_POSTGRES_DB:-dify}
-      # postgres data directory
-      PGDATA: ${PGVECTOR_PGDATA:-/var/lib/postgresql/data/pgdata}
-      # pg_bigm module for full text search
-      PG_BIGM: ${PGVECTOR_PG_BIGM:-false}
-      PG_BIGM_VERSION: ${PGVECTOR_PG_BIGM_VERSION:-1.2-20240606}
-    volumes:
-      - ./volumes/pgvector/data:/var/lib/postgresql/data
-      - ./pgvector/docker-entrypoint.sh:/docker-entrypoint.sh
-    entrypoint: [ '/docker-entrypoint.sh' ]
-    healthcheck:
-      test: [ 'CMD', 'pg_isready' ]
-      interval: 1s
-      timeout: 3s
-      retries: 30
-
-  # get image from https://www.vastdata.com.cn/
-  vastbase:
-    image: vastdata/vastbase-vector
-    profiles:
-      - vastbase
-    restart: always
-    environment:
-      - VB_DBCOMPATIBILITY=PG
-      - VB_DB=dify
-      - VB_USERNAME=dify
-      - VB_PASSWORD=Difyai123456
-    volumes:
-      - ./vastbase/lic:/home/vastbase/vastbase/lic
-      - ./vastbase/data:/home/vastbase/data
-      - ./vastbase/backup:/home/vastbase/backup
-      - ./vastbase/backup_log:/home/vastbase/backup_log
-    healthcheck:
-      test: [ 'CMD', 'pg_isready' ]
-      interval: 1s
-      timeout: 3s
-      retries: 30
-
-  # pgvecto-rs vector store
-  pgvecto-rs:
-    image: tensorchord/pgvecto-rs:pg16-v0.3.0
-    profiles:
-      - pgvecto-rs
-    restart: always
-    environment:
-      PGUSER: ${PGVECTOR_PGUSER:-postgres}
-      # The password for the default postgres user.
-      POSTGRES_PASSWORD: ${PGVECTOR_POSTGRES_PASSWORD:-difyai123456}
-      # The name of the default postgres database.
-      POSTGRES_DB: ${PGVECTOR_POSTGRES_DB:-dify}
-      # postgres data directory
-      PGDATA: ${PGVECTOR_PGDATA:-/var/lib/postgresql/data/pgdata}
-    volumes:
-      - ./volumes/pgvecto_rs/data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ 'CMD', 'pg_isready' ]
-      interval: 1s
-      timeout: 3s
-      retries: 30
-
-  # Chroma vector database
-  chroma:
-    image: ghcr.io/chroma-core/chroma:0.5.20
-    profiles:
-      - chroma
-    restart: always
-    volumes:
-      - ./volumes/chroma:/chroma/chroma
-    environment:
-      CHROMA_SERVER_AUTHN_CREDENTIALS: ${CHROMA_SERVER_AUTHN_CREDENTIALS:-difyai123456}
-      CHROMA_SERVER_AUTHN_PROVIDER: ${CHROMA_SERVER_AUTHN_PROVIDER:-chromadb.auth.token_authn.TokenAuthenticationServerProvider}
-      IS_PERSISTENT: ${CHROMA_IS_PERSISTENT:-TRUE}
-
-  # OceanBase vector database
-  oceanbase:
-    image: oceanbase/oceanbase-ce:4.3.5.1-101000042025031818
-    profiles:
-      - oceanbase
-    restart: always
-    volumes:
-      - ./volumes/oceanbase/data:/root/ob
-      - ./volumes/oceanbase/conf:/root/.obd/cluster
-      - ./volumes/oceanbase/init.d:/root/boot/init.d
-    environment:
-      OB_MEMORY_LIMIT: ${OCEANBASE_MEMORY_LIMIT:-6G}
-      OB_SYS_PASSWORD: ${OCEANBASE_VECTOR_PASSWORD:-difyai123456}
-      OB_TENANT_PASSWORD: ${OCEANBASE_VECTOR_PASSWORD:-difyai123456}
-      OB_CLUSTER_NAME: ${OCEANBASE_CLUSTER_NAME:-difyai}
-      MODE: MINI
-
-  # Oracle vector database
-  oracle:
-    image: container-registry.oracle.com/database/free:latest
-    profiles:
-      - oracle
-    restart: always
-    volumes:
-      - source: oradata
-        type: volume
-        target: /opt/oracle/oradata
-      - ./startupscripts:/opt/oracle/scripts/startup
-    environment:
-      ORACLE_PWD: ${ORACLE_PWD:-Dify123456}
-      ORACLE_CHARACTERSET: ${ORACLE_CHARACTERSET:-AL32UTF8}
-
-  # Milvus vector database services
-  etcd:
-    image: quay.io/coreos/etcd:v3.5.5
-    profiles:
-      - milvus
-    environment:
-      ETCD_AUTO_COMPACTION_MODE: ${ETCD_AUTO_COMPACTION_MODE:-revision}
-      ETCD_AUTO_COMPACTION_RETENTION: ${ETCD_AUTO_COMPACTION_RETENTION:-1000}
-      ETCD_QUOTA_BACKEND_BYTES: ${ETCD_QUOTA_BACKEND_BYTES:-4294967296}
-      ETCD_SNAPSHOT_COUNT: ${ETCD_SNAPSHOT_COUNT:-50000}
-    volumes:
-      - ./volumes/milvus/etcd:/etcd
-    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls
-      http://0.0.0.0:2379 --data-dir /etcd
-    healthcheck:
-      test: [ 'CMD', 'etcdctl', 'endpoint', 'health' ]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    networks:
-      - milvus
 
   minio:
     image: minio/minio:RELEASE.2023-03-20T20-16-18Z
@@ -1041,74 +866,6 @@ services:
       - minio
     networks:
       - milvus
-
-  # Opensearch vector database
-  opensearch:
-    image: opensearchproject/opensearch:latest
-    profiles:
-      - opensearch
-    environment:
-      discovery.type: ${OPENSEARCH_DISCOVERY_TYPE:-single-node}
-      bootstrap.memory_lock: ${OPENSEARCH_BOOTSTRAP_MEMORY_LOCK:-true}
-      OPENSEARCH_JAVA_OPTS: -Xms${OPENSEARCH_JAVA_OPTS_MIN:-512m}
-        -Xmx${OPENSEARCH_JAVA_OPTS_MAX:-1024m}
-      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-Qazwsxedc!@#123}
-    ulimits:
-      memlock:
-        soft: ${OPENSEARCH_MEMLOCK_SOFT:--1}
-        hard: ${OPENSEARCH_MEMLOCK_HARD:--1}
-      nofile:
-        soft: ${OPENSEARCH_NOFILE_SOFT:-65536}
-        hard: ${OPENSEARCH_NOFILE_HARD:-65536}
-    volumes:
-      - ./volumes/opensearch/data:/usr/share/opensearch/data
-    networks:
-      - opensearch-net
-
-  opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:latest
-    profiles:
-      - opensearch
-    environment:
-      OPENSEARCH_HOSTS: '["https://opensearch:9200"]'
-    volumes:
-      - ./volumes/opensearch/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
-    networks:
-      - opensearch-net
-    depends_on:
-      - opensearch
-
-  # opengauss vector database.
-  opengauss:
-    image: opengauss/opengauss:7.0.0-RC1
-    profiles:
-      - opengauss
-    privileged: true
-    restart: always
-    environment:
-      GS_USERNAME: ${OPENGAUSS_USER:-postgres}
-      GS_PASSWORD: ${OPENGAUSS_PASSWORD:-Dify@123}
-      GS_PORT: ${OPENGAUSS_PORT:-6600}
-      GS_DB: ${OPENGAUSS_DATABASE:-dify}
-    volumes:
-      - ./volumes/opengauss/data:/var/lib/opengauss/data
-    healthcheck:
-      test: [ "CMD-SHELL", "netstat -lntp | grep tcp6 > /dev/null 2>&1" ]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-
-  # MyScale vector database
-  myscale:
-    image: myscale/myscaledb:1.6.4
-    profiles:
-      - myscale
-    restart: always
-    tty: true
-    volumes:
-      - ./volumes/myscale/data:/var/lib/clickhouse
-      - ./volumes/myscale/log:/var/log/clickhouse-server
-      - ./volumes/myscale/config/users.d/custom_users_config.xml:/etc/clickhouse-server/users.d/custom_users_config.xml
 
   # https://www.elastic.co/guide/en/elasticsearch/reference/current/settings.html
   # https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites
