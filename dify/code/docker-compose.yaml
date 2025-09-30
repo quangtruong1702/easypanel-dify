@@ -50,7 +50,7 @@ x-shared-env: &shared-api-worker-env
   DB_USERNAME: ${DB_USERNAME:-postgres}
   DB_PASSWORD: ${DB_PASSWORD:-difyai123456}
   DB_HOST: ${DB_HOST:-db}
-  DB_PORT: ${DB_PORT:-5433}
+  DB_PORT: ${DB_PORT:-5432}
   DB_DATABASE: ${DB_DATABASE:-dify}
   SQLALCHEMY_POOL_SIZE: ${SQLALCHEMY_POOL_SIZE:-30}
   SQLALCHEMY_POOL_RECYCLE: ${SQLALCHEMY_POOL_RECYCLE:-3600}
@@ -580,7 +580,7 @@ services:
   db:
     image: postgres:17.6
     ports:
-      - "5433:5432"
+      - "5432:5432"
     restart: always
     environment:
       PGUSER: ${PGUSER:-postgres}
