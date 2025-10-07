@@ -597,7 +597,7 @@ services:
       ENABLE_WEBSITE_WATERCRAWL: ${ENABLE_WEBSITE_WATERCRAWL:-true}
   # The postgres database.
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     restart: always
     environment:
       PGUSER: ${PGUSER:-postgres}
@@ -810,7 +810,7 @@ services:
 
   # The Weaviate vector store.
   weaviate:
-    image: semitechnologies/weaviate:1.19.0
+    image: semitechnologies/weaviate:1.33.0
     profiles:
       - ''
       - weaviate
