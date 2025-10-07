@@ -551,7 +551,7 @@ services:
     networks:
       - ssrf_proxy_network
       - default
-      
+
   # worker_beat service
   # Celery beat for scheduling periodic tasks.
   worker_beat:
@@ -630,7 +630,7 @@ services:
 
   # The redis cache.
   redis:
-    image: redis:6-alpine
+    image: redis:7-alpine
     restart: always
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:-difyai123456}
