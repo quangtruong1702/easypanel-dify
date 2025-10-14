@@ -599,8 +599,6 @@ services:
   db:
     image: postgres:15-alpine
     restart: always
-    ports:
-      - 5432:5432
     environment:
       PGUSER: ${PGUSER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-difyai123456}
