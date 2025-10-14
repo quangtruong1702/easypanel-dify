@@ -599,6 +599,8 @@ services:
   db:
     image: postgres:15-alpine
     restart: always
+    ports:
+      - 5432:5432
     environment:
       PGUSER: ${PGUSER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-difyai123456}
@@ -810,7 +812,7 @@ services:
 
   # The Weaviate vector store.
   weaviate:
-    image: semitechnologies/weaviate:1.19.0
+    image: semitechnologies/weaviate:1.33.0
     profiles:
       - ''
       - weaviate
