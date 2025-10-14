@@ -816,6 +816,9 @@ services:
     profiles:
       - ''
       - weaviate
+    ports:
+      - "8080:8080"    # REST API
+      - "6060:6060"    # Optional: metrics/debug
     restart: always
     volumes:
       # Mount the Weaviate data directory to the con tainer.
